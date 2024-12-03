@@ -1,101 +1,185 @@
-import Image from "next/image";
+'use client'
+import { EXPLORER } from "@/utils/constants";
+import { useState } from "react";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    const [explorer, setExplorer] = useState(EXPLORER);
+    const [expand, setExpand] = useState({});
+    const [showInput, setShowInput] = useState({
+        visible: false,
+        isFolder: false,
+        parentId: null
+    });
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    const handleExpand = (ele) => {
+        setExpand(prev => {
+            const temp = { ...prev }
+            if(temp[ele.id]){
+                temp[ele.id] = false
+            }else{  
+                temp[ele.id] = true
+            }
+            return temp
+        })
+    }
+
+    const handleNewItem = (e, parentId, isFolder) => {
+        e.stopPropagation();
+        setShowInput({
+            visible: true,
+            isFolder,
+            parentId
+        });
+    }
+
+    const handleAddItem = (e) => {
+        if (e.keyCode === 13 && e.target.value) {
+            const name = e.target.value;
+            const newItem = {
+                id: Date.now(),
+                name,
+                isFolder: showInput.isFolder,
+                items: showInput.isFolder ? [] : null
+            };
+
+            // Function to add item to nested structure
+            const addItemToExplorer = (data) => {
+                return data.map((item) => {
+                    if (item.id === showInput.parentId) {
+                        return {
+                            ...item,
+                            items: [...(item.items || []), newItem]
+                        };
+                    }
+                    if (item.items) {
+                        return {
+                            ...item,
+                            items: addItemToExplorer(item.items)
+                        };
+                    }
+                    return item;
+                });
+            };
+
+            setExplorer(addItemToExplorer(explorer));
+            setShowInput({ visible: false, isFolder: false, parentId: null });
+            // Expand the parent folder
+            setExpand(prev => ({
+                ...prev,
+                [showInput.parentId]: true
+            }));
+        }
+    }
+
+    const FileIcon = ({ isFolder, isExpanded }) => {
+        if (isFolder) {
+            return (
+                <svg className="w-5 h-5 text-[#E195AB]" viewBox="0 0 20 20" fill="currentColor">
+                    {isExpanded ? (
+                        <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                    ) : (
+                        <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V8a2 2 0 00-2-2h-5L9 4H4z" />
+                    )}
+                </svg>
+            );
+        }
+        return (
+            <svg className="w-5 h-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+            </svg>
+        );
+    };
+
+    const ActionButtons = ({ element }) => {
+        return (
+            <div className="ml-auto flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <button 
+                    onClick={(e) => handleNewItem(e, element.id, false)}
+                    className="hover:bg-[#FFCCE1] bg-[#E195AB] text-white text-xs py-0.5 px-2 rounded-md transition-colors duration-150">
+                    + File
+                </button>
+                <button 
+                    onClick={(e) => handleNewItem(e, element.id, true)}
+                    className="hover:bg-[#FFCCE1] bg-[#E195AB] text-white text-xs py-0.5 px-2 rounded-md transition-colors duration-150">
+                    + Folder
+                </button>
+            </div>
+        );
+    };
+
+    const file = (explorer) => {
+        return (
+            <div className="flex flex-col">
+                {explorer.map(element => (
+                    <div key={element.id} className="ml-4">
+                        <div 
+                            onClick={() => handleExpand(element)}
+                            className={`group flex items-center py-1.5 px-2 rounded-md cursor-pointer
+                                ${element.isFolder ? 'hover:bg-[#FFF5D7]' : 'hover:bg-[#F2F9FF]'}
+                                ${expand[element.id] ? 'bg-[#FFF5D7] bg-opacity-40' : ''}
+                                transition-colors duration-150 ease-in-out`}
+                        >
+                            <div className="flex items-center flex-1 min-w-0">
+                                <div className="mr-1.5 flex items-center">
+                                    <FileIcon isFolder={element.isFolder} isExpanded={expand[element.id]} />
+                                </div>
+                                <div className="flex items-center justify-between w-full">
+                                    <span className={`truncate ${element.isFolder ? 'text-[#E195AB] font-medium' : 'text-gray-700'}`}>
+                                        {element.name}
+                                    </span>
+                                    {element.isFolder && <ActionButtons element={element} />}
+                                </div>
+                            </div>
+                            {element.isFolder && (
+                                <span className="ml-2 text-xs text-[#E195AB]">
+                                    {expand[element.id] ? '[-]' : '[+]'}
+                                </span>
+                            )}
+                        </div>
+                        <div className={`
+                            overflow-hidden transition-all duration-200
+                            ${expand[element.id] ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'}
+                        `}>
+                            {element.items && file(element.items)}
+                            {showInput.visible && showInput.parentId === element.id && (
+                                <div className="ml-4 my-2 flex items-center">
+                                    <FileIcon isFolder={showInput.isFolder} isExpanded={false} />
+                                    <input
+                                        type="text"
+                                        autoFocus
+                                        onKeyDown={handleAddItem}
+                                        onBlur={() => setShowInput({ visible: false, isFolder: false, parentId: null })}
+                                        className="ml-1 px-2 py-1 border border-[#E195AB] rounded-md text-sm focus:outline-none focus:border-[#FFCCE1] focus:ring-1 focus:ring-[#FFCCE1]"
+                                        placeholder={`Enter ${showInput.isFolder ? 'folder' : 'file'} name...`}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gradient-to-b from-[#F2F9FF] to-white p-8">
+            <header className="mb-6">
+                <h1 className="text-2xl font-semibold text-[#E195AB] text-center">
+                    File Explorer
+                </h1>
+            </header>
+            <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-lg border border-[#FFCCE1] overflow-hidden">
+                <div className="bg-[#F2F9FF] px-4 py-2 border-b border-[#FFCCE1]">
+                    <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 rounded-full bg-[#FFCCE1]"></div>
+                        <div className="w-3 h-3 rounded-full bg-[#E195AB]"></div>
+                        <div className="w-3 h-3 rounded-full bg-[#FFF5D7]"></div>
+                    </div>
+                </div>
+                <div className="p-4">
+                    {file(explorer)}
+                </div>
+            </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+    );
 }
